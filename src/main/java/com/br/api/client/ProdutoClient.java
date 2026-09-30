@@ -1,6 +1,7 @@
 package com.br.api.client;
 
 import com.br.api.endpoint.Endpoints;
+import com.br.api.model.request.ProdutoRequest;
 import io.restassured.response.Response;
 import lombok.AllArgsConstructor;
 
@@ -27,9 +28,26 @@ public class ProdutoClient {
                 .get(PRODUTOS.getPath());
     }
 
-    public static String getProdutoById(String id) {
-        // Aqui você pode implementar a lógica para chamar a API e obter o produto pelo ID
-        // Por exemplo, usando RestAssured ou outra biblioteca HTTP
-        return "Produto com ID: " + id;
+    public static Response criarProduto(String token, ProdutoRequest request) {
+        return ApiClients.given()
+                .header("Authorization", "Bearer " + token)
+                .body(request)
+                .when()
+                .post(PRODUTOS.getPath());
     }
+
+    public static Response criarProdutoSemToken(ProdutoRequest request) {
+        return ApiClients.given()
+                .body(request)
+                .when()
+                .post(PRODUTOS.getPath());
+    }
+
+    public static Response excluirProduto(String token, Long id) {
+        return ApiClients.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete(PRODUTOS.getPath() + "/" + id);
+    }
+
 }

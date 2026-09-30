@@ -9,7 +9,9 @@ public enum Endpoints {
     PEDIDO("/pedidos"),
     PRODUTOS("/produtos"),
     LOGIN("/auth/login"),
-    USUARIOS("/usuarios");
+    REGISTRO("/auth/registro"),
+    USUARIOS("/usuarios"),
+    MANUTENCAO_BANCO("/manutencao/banco");
 
     private final String path;
 

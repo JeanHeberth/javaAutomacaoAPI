@@ -2,6 +2,7 @@ package com.br.api.auth;
 
 import com.br.api.client.AuthClient;
 import com.br.api.config.ConfigLoader;
+import com.br.api.massa.MassaArquivos;
 import com.br.api.model.massa.CasoLoginInvalido;
 import com.br.api.model.massa.MassaUsuarios;
 import com.br.api.model.massa.UsuarioMassa;
@@ -27,13 +28,11 @@ import static org.hamcrest.Matchers.notNullValue;
  */
 class LoginTest extends BaseTest {
 
-    private static final String MASSA_USUARIOS = "massa/usuarios.yaml";
-
     private static MassaUsuarios massa;
 
     @BeforeAll
     static void prepararUsuarioDeTeste() {
-        massa = ConfigLoader.carregar(MASSA_USUARIOS, MassaUsuarios.class);
+        massa = ConfigLoader.carregar(MassaArquivos.USUARIOS.getPath(), MassaUsuarios.class);
         AutenticacaoTestSupport.garantirUsuarioRegistrado(massa.getUsuarioValido());
     }
 
@@ -76,7 +75,7 @@ class LoginTest extends BaseTest {
     }
 
     static Stream<CasoLoginInvalido> casosLoginInvalido() {
-        MassaUsuarios massaCasos = ConfigLoader.carregar(MASSA_USUARIOS, MassaUsuarios.class);
+        MassaUsuarios massaCasos = ConfigLoader.carregar(MassaArquivos.USUARIOS.getPath(), MassaUsuarios.class);
         return massaCasos.getCasosLoginInvalido().stream();
     }
 }

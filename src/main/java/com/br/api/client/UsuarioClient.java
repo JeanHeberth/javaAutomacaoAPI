@@ -25,4 +25,11 @@ public class UsuarioClient {
                 .when()
                 .get(USUARIOS.getPath());
     }
+
+    public static Response excluirUsuario(String token, Long id) {
+        return ApiClients.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete(USUARIOS.getPath() + "/" + id);
+    }
 }

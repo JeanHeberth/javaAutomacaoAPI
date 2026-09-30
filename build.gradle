@@ -24,6 +24,8 @@ def jacksonVersion = "2.18.2"
 def lombokVersion = "1.18.48"
 def allureVersion = "2.35.5"
 def aspectjVersion = "1.9.25"
+def slf4jVersion = "2.0.18"
+def logbackVersion = "1.6.4"
 
 configurations {
     aspectjWeaver
@@ -39,6 +41,11 @@ dependencies {
     // para anexar request/response de cada chamada HTTP ao relatorio.
     implementation(platform("io.qameta.allure:allure-bom:$allureVersion"))
     implementation("io.qameta.allure:allure-rest-assured")
+
+    // Logger das classes de suporte (fluxo de negocio dos testes). Logback
+    // e runtimeOnly pois o codigo so depende da API do SLF4J.
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    runtimeOnly("ch.qos.logback:logback-classic:$logbackVersion")
 
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
@@ -63,6 +70,7 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStandardStreams = true
     }
     jvmArgs += ["-javaagent:${configurations.aspectjWeaver.singleFile}"]
 }
