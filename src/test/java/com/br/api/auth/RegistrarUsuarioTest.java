@@ -1,24 +1,20 @@
 package com.br.api.auth;
 
-import com.br.api.client.AuthClient;
-import com.br.api.client.UsuarioClient;
-import com.br.api.model.request.RegistroRequest;
-import com.br.api.model.response.AuthResponse;
-import com.br.api.support.BaseTest;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import com.br.api.dto.auth.AuthResponse;
+import com.br.api.dto.auth.RegistroRequest;
+import com.br.api.requests.AuthControllerRequests;
+import com.br.api.requests.UsuarioControllerRequests;
+import com.br.api.utils.BaseTest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,34 +24,36 @@ import static org.assertj.core.api.Assertions.assertThat;
  * O email de cada usuario e gerado dinamicamente (UUID) para que os testes
  * continuem repetiveis mesmo sem reset de banco entre execucoes. Todo
  * usuario criado com sucesso e registrado em {@code usuariosCriados} e
- * removido no @AfterAll, para nao deixar sujeira no banco.
+ * removido no @AfterClass, para nao deixar sujeira no banco.
  */
-class RegistrarUsuarioTest extends BaseTest {
+public class RegistrarUsuarioTest extends BaseTest {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrarUsuarioTest.class);
     private static final List<Long> usuariosCriados = new ArrayList<>();
 
+    private final AuthControllerRequests authController = new AuthControllerRequests();
+    private final UsuarioControllerRequests usuarioController = new UsuarioControllerRequests();
+
     private static String token;
 
-    @BeforeAll
-    static void autenticar() {
+    @BeforeClass
+    public void autenticar() {
         token = obterToken();
     }
 
-    @AfterAll
-    static void limparUsuariosCriados() {
+    @AfterClass
+    public void limparUsuariosCriados() {
         usuariosCriados.forEach(id -> {
-            int status = UsuarioClient.excluirUsuario(token, id).statusCode();
+            int status = usuarioController.excluirUsuario(token, id).statusCode();
             log.info("Limpeza: usuario id={} removido (HTTP {})", id, status);
         });
     }
 
-    @Test
-    @DisplayName("Registrar usuario com dados validos deve retornar 201 e um token JWT")
-    void registrarUsuarioComDadosValidosDeveRetornar201() {
+    @Test(description = "Registrar usuario com dados validos deve retornar 201 e um token JWT")
+    public void registrarUsuarioComDadosValidosDeveRetornar201() {
         RegistroRequest request = usuarioNovoValido();
 
-        AuthResponse resposta = AuthClient.registrar(request)
+        AuthResponse resposta = authController.registrar(request)
                 .then()
                 .statusCode(201)
                 .extract()
@@ -69,30 +67,28 @@ class RegistrarUsuarioTest extends BaseTest {
         assertThat(resposta.usuario().email()).isEqualTo(request.email());
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("payloadsInvalidos")
-    @DisplayName("Registrar usuario com dados invalidos deve retornar 400")
-    void registrarUsuarioComDadosInvalidosDeveRetornar400(String cenario, RegistroRequest request) {
-        AuthClient.registrar(request)
+    @Test(dataProvider = "payloadsInvalidos", description = "Registrar usuario com dados invalidos deve retornar 400")
+    public void registrarUsuarioComDadosInvalidosDeveRetornar400(String cenario, RegistroRequest request) {
+        authController.registrar(request)
                 .then()
                 .statusCode(400);
     }
 
-    static Stream<Arguments> payloadsInvalidos() {
-        return Stream.of(
-                Arguments.of("Nome muito curto", new RegistroRequest("Jo", emailUnico(), "senha123")),
-                Arguments.of("Nome em branco", new RegistroRequest("", emailUnico(), "senha123")),
-                Arguments.of("Email invalido", new RegistroRequest("Usuario Teste", "email-invalido", "senha123")),
-                Arguments.of("Senha muito curta", new RegistroRequest("Usuario Teste", emailUnico(), "123"))
-        );
+    @DataProvider(name = "payloadsInvalidos")
+    public Object[][] payloadsInvalidos() {
+        return new Object[][]{
+                {"Nome muito curto", new RegistroRequest("Jo", emailUnico(), "senha123")},
+                {"Nome em branco", new RegistroRequest("", emailUnico(), "senha123")},
+                {"Email invalido", new RegistroRequest("Usuario Teste", "email-invalido", "senha123")},
+                {"Senha muito curta", new RegistroRequest("Usuario Teste", emailUnico(), "123")}
+        };
     }
 
-    @Test
-    @DisplayName("Registrar usuario com email ja cadastrado deve retornar 409")
-    void registrarUsuarioComEmailDuplicadoDeveRetornar409() {
+    @Test(description = "Registrar usuario com email ja cadastrado deve retornar 409")
+    public void registrarUsuarioComEmailDuplicadoDeveRetornar409() {
         RegistroRequest request = usuarioNovoValido();
 
-        Long idCriado = AuthClient.registrar(request)
+        Long idCriado = authController.registrar(request)
                 .then()
                 .statusCode(201)
                 .extract()
@@ -100,7 +96,7 @@ class RegistrarUsuarioTest extends BaseTest {
                 .getLong("usuario.id");
         usuariosCriados.add(idCriado);
 
-        AuthClient.registrar(request)
+        authController.registrar(request)
                 .then()
                 .statusCode(409);
     }
