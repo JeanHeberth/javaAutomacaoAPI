@@ -1,0 +1,25 @@
+usuarioValido:
+  nome: "Usuario Automacao QA"
+  email: "qa.automacao@teste.com"
+  senha: "senha123"
+
+casosLoginInvalido:
+  - descricao: "Senha incorreta"
+    email: "qa.automacao@teste.com"
+    senha: "senhaErrada123"
+    statusEsperado: 401
+
+  - descricao: "Email nao cadastrado"
+    email: "naoexiste.automacao@teste.com"
+    senha: "senha123"
+    statusEsperado: 401
+
+  - descricao: "Email em branco"
+    email: ""
+    senha: "senha123"
+    statusEsperado: 400
+
+  - descricao: "Senha em branco"
+    email: "qa.automacao@teste.com"
+    senha: ""
+    statusEsperado: 400

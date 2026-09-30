@@ -1,9 +1,18 @@
+import java.net.Socket
+
 plugins {
     id("java")
+    id("io.qameta.allure") version "4.1.0"
 }
 
 group = "com.br"
 version = "1.0-SNAPSHOT"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
 
 repositories {
     mavenCentral()
@@ -12,13 +21,24 @@ repositories {
 def restAssuredVersion = "5.5.1"
 def snakeYamlVersion = "2.3"
 def jacksonVersion = "2.18.2"
-def lombokVersion = "1.18.34"
+def lombokVersion = "1.18.48"
+def allureVersion = "2.35.5"
+def aspectjVersion = "1.9.25"
+
+configurations {
+    aspectjWeaver
+}
 
 dependencies {
     // Framework de automacao (clients, models, config) - usado por main e test
     implementation("io.rest-assured:rest-assured:$restAssuredVersion")
     implementation("org.yaml:snakeyaml:$snakeYamlVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+
+    // Allure REST Assured, usado dentro de ApiClients.given() (camada main)
+    // para anexar request/response de cada chamada HTTP ao relatorio.
+    implementation(platform("io.qameta.allure:allure-bom:$allureVersion"))
+    implementation("io.qameta.allure:allure-rest-assured")
 
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
@@ -31,6 +51,11 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-params")
     testImplementation("org.assertj:assertj-core:3.26.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // Allure: listener que gera os resultados de cada teste JUnit 5 e
+    // suporte a @Step/@Attachment via AspectJ.
+    testImplementation("io.qameta.allure:allure-jupiter")
+    aspectjWeaver("org.aspectj:aspectjweaver:$aspectjVersion")
 }
 
 tasks.test {
@@ -38,5 +63,54 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+    jvmArgs += ["-javaagent:${configurations.aspectjWeaver.singleFile}"]
+}
+
+// Necessario para o Jackson deserializar records pelo construtor canonico
+// (usa os nomes dos parametros para casar com os campos do JSON).
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ["-parameters"]
+}
+
+// A task "allureServe" do plugin (Allure 3.9.0) gera a arvore de resultados
+// vazia (bug conhecido nessa combinacao de versoes: os dados brutos estao
+// corretos, mas o "tree.json" servido fica com roots/nodes vazios). Ate isso
+// ser corrigido, esta task serve o HTML ja gerado por "allureReport" (esse
+// sim, correto) num servidor HTTP simples.
+tasks.register("allureOpen") {
+    group = "verification"
+    description = "Gera o relatorio Allure (allureReport) e o serve localmente, contornando o bug de arvore vazia do allureServe."
+    dependsOn("allureReport")
+
+    def reportDir = layout.buildDirectory.dir("reports/allure-report/allureReport")
+    def port = (findProperty("allureOpenPort") ?: "8090").toString()
+
+    doLast {
+        def dir = reportDir.get().asFile
+        def url = "http://127.0.0.1:${port}"
+
+        def server = new ProcessBuilder("python3", "-m", "http.server", port, "--bind", "127.0.0.1")
+                .directory(dir)
+                .redirectErrorStream(true)
+                .start()
+
+        def aguardandoServidor = true
+        for (int i = 0; i < 50 && aguardandoServidor; i++) {
+            try {
+                new Socket("127.0.0.1", port as int).close()
+                aguardandoServidor = false
+            } catch (IOException ignored) {
+                Thread.sleep(100)
+            }
+        }
+
+        println "Allure is running on ${url}"
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            new ProcessBuilder("open", url).start()
+        }
+
+        Runtime.runtime.addShutdownHook(new Thread({ server.destroy() }))
+        server.waitFor()
     }
 }

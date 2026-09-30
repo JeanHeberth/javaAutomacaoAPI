@@ -2,8 +2,6 @@ package com.br.api.model.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import java.util.Map;
-
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record HealthResponse(String status, Map<String, Object> components) {
+public record AuthResponse(String token, String tipo, UsuarioResponse usuario) {
 }
