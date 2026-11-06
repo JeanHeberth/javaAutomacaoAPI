@@ -1,45 +1,49 @@
 package com.br.api.usuarios;
 
-import com.br.api.client.ProdutoClient;
-import com.br.api.client.UsuarioClient;
-import com.br.api.support.BaseTest;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import com.br.api.dto.massa.UsuarioMassa;
+import com.br.api.requests.UsuarioControllerRequests;
+import com.br.api.utils.TestSupport;
+import com.br.api.utils.BaseTest;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ListarUsuariosTest extends BaseTest {
+public class ListarUsuariosTest extends BaseTest {
+
+    private final UsuarioControllerRequests usuarioController = new UsuarioControllerRequests();
 
     private static String token;
 
-    @BeforeAll
-    static void setUp() {
+    @BeforeClass
+    public void setUp() {
         token = obterToken();
     }
 
-    @Test
-    @DisplayName("Nao Deve listar usuários sem token de autenticação")
-    void listarUsuariosSemToken() {
-        UsuarioClient.listarUsuariosSemToken(Collections.emptyMap())
+    @Test(description = "Nao deve listar usuarios sem token de autenticacao")
+    public void listarUsuariosSemToken() {
+        usuarioController.listarUsuariosSemToken(Collections.emptyMap())
                 .then()
                 .statusCode(401);
     }
 
-    @Test
-    @DisplayName("Deve listar usuários com token de autenticação válido")
-    void listarUsuariosComTokenValido() {
+    @Test(description = "Deve listar usuarios com token de autenticacao valido")
+    public void listarUsuariosComTokenValido() {
+        // "obterToken()" garante que o usuario valido da massa (usuarios.yaml)
+        // esta cadastrado — e o unico usuario cuja existencia o teste pode
+        // assumir, ja que o banco e limpo antes da suite (ver BaseTest).
+        UsuarioMassa usuarioValido = TestSupport.carregarMassa().getUsuarioValido();
 
-        List<String> nomesUsuarios = UsuarioClient.listarUsuarios(token, Collections.emptyMap())
+        List<String> nomesUsuarios = usuarioController.listarUsuarios(token, Collections.emptyMap())
                 .then()
                 .statusCode(200)
                 .extract()
                 .jsonPath()
                 .getList("nome", String.class);
 
-        assertThat(nomesUsuarios).contains("João da Silva");
+        assertThat(nomesUsuarios).contains(usuarioValido.getNome());
     }
 }

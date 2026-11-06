@@ -1,0 +1,5 @@
+nome: "Produto Teste Automatizado"
+descricao: "Produto criado via teste automatizado"
+preco: "99.90"
+estoque: 10
+categoria: "ELETRONICO"
